@@ -24,8 +24,11 @@ python -m pytest -q
 2. 在「分钟有效性裁决」选「仅缺证」，查看氧量超界、同版冲突和仪器校准。工况重叠分钟在两份记录间以停机优先。
 3. 在「报送差异对账」核对 08:00 复算 30.50、报送 29.75、差额 +0.75 mg/Nm³。09:00 的 44 个有效分钟低于 45 门槛。
 4. 点击「归档复算」并重跑。相同原件复用运行编号。在「监测证据签发」下载带输入摘要、原值、裁决与勾稽的 JSON。
+5. 在「监测留档复跑」页办理到期清理。可单独「解除保留并清理」，也可「签发并清理」。清理后库内批次只保留 `results.hours`；逐文件原件进入引用台账，两批共用的原件会保留到最后一批解除引用。签出的 JSON 内嵌 `manifest`、`originals` 与 `results`，可在证据页重新选择文件或粘贴文本复核。
 
 五个预览接口均为 `GET /api/samples/{dirty|clean}/{stage}`，各工序按需计算；`stage` 值见深度登记。自有数据通过 `POST /api/runs` 的 `files` 对象提交字符串 `window`、`minutes`、`modes`、`reports`，也可提交 `{"sample":"dirty"}`。`GET /api/runs/{id}/{stage}` 查询归档，每次归档仅写入一个 SQLite 事务。`GET /api/runs` 列出历史，`GET /api/export/{id}` 签发证据。
+
+留档清理使用 `POST /api/runs/{id}/cleanup`；同事务签发可传 `{"issue": true}`，响应中的 `certificate` 与响应主体均可独立复核。`GET /api/retention` 查看批次和原件引用，`POST /api/retention/cleanup` 清理到期批次（也可用 `run_ids` 显式指定），`POST /api/evidence/verify` 复核已签出的证据 JSON。清理后的批次仍可查询 `hours`，其他明细阶段返回 `410 ARCHIVE_CLEANED`；重复提交同一原件包会复用运行编号，不会恢复或重复写入原件。
 
 - [数据定义与计算边界](docs/DATA-DICTIONARY.md)
 - [模块与陷阱验证](docs/DEPTH.md)

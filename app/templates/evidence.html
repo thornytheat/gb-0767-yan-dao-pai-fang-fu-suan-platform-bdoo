@@ -1,1 +1,26 @@
-<section class="panel certificate"><h2>监测证据单</h2>{% if certificate %}<p>分钟勾稽差额 <b>{{ certificate.minute_balance }}</b></p><p>证据摘要 <code>{{ certificate.sha256 }}</code></p><a class="download" href="{{ url_for('api.export',run_id=run_id) }}">下载监测证据</a>{% else %}<p>先归档再签发。</p>{% endif %}</section>
+<section class="panel certificate">
+  <h2>监测证据单</h2>
+  {% if cleaned %}
+    <p class="cleaned-notice">该批次服务端原件已清理，不能重新签发。此前签发并下载的 JSON 仍可在下方独立复核。</p>
+    {% if retention and retention.released_utc %}<p>清理时间 <code>{{ retention.released_utc }}</code></p>{% endif %}
+    <p><a href="{{ url_for('desk.show',page='hours',run=run_id) }}">查看保留的小时结论</a></p>
+  {% elif certificate %}
+    <p>分钟勾稽差额 <b>{{ certificate.minute_balance }}</b></p>
+    <p>证据摘要 <code>{{ certificate.sha256 }}</code></p>
+    <a class="download" href="{{ url_for('api.export',run_id=run_id) }}">下载监测证据</a>
+  {% else %}
+    <p>先归档再签发。</p>
+  {% endif %}
+</section>
+
+<section class="panel verifier">
+  <h2>复核已签出的证据</h2>
+  <p class="hint">选择「签发并清理」时得到的 JSON。复核只依赖文件内嵌的 <code>manifest</code>、<code>originals</code> 和 <code>results</code>，不要求留档库仍保存原件。</p>
+  <div class="inline-form verifier-inputs">
+    <input type="file" id="evidence-file" accept=".json,application/json">
+    <span>或粘贴 JSON</span>
+    <button type="button" id="verify-evidence">复核证据 JSON</button>
+  </div>
+  <textarea id="evidence-text" rows="6" placeholder="粘贴签发时下载的监测证据 JSON"></textarea>
+  <pre id="verify-output" role="status" hidden></pre>
+</section>

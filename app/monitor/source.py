@@ -15,21 +15,25 @@ def sample(name):
 
 
 def input_packet(payload):
-    if not isinstance(payload, dict) or set(payload) not in ({'sample'}, {'files'}):
+    if not isinstance(payload, dict):
         raise InputError('BAD_PACKET', '选择内置样例或提供四份原件')
-    if 'sample' in payload:
+    if 'sample' in payload and 'files' not in payload:
+        if payload['sample'] not in {'dirty', 'clean'}:
+            raise InputError('SAMPLE_UNKNOWN', '找不到指定样例', 404)
         return sample(str(payload['sample'])), str(payload['sample'])
-    files = payload['files']
-    if not isinstance(files, dict) or set(files) != set(FILES) or any(
-        not isinstance(value, str) or len(value) > SOURCE_LIMIT for value in files.values()
-    ):
-        raise InputError('BAD_PACKET', '四份原件必须为限长 UTF-8 文本')
-    try:
-        for value in files.values():
-            value.encode('utf-8')
-    except UnicodeEncodeError:
-        raise InputError('BAD_PACKET', '原件含无效 Unicode') from None
-    return files, 'upload'
+    if 'files' in payload and 'sample' not in payload:
+        files = payload['files']
+        if not isinstance(files, dict) or set(files) != set(FILES) or any(
+            not isinstance(value, str) or len(value) > SOURCE_LIMIT for value in files.values()
+        ):
+            raise InputError('BAD_PACKET', '四份原件必须为限长 UTF-8 文本')
+        try:
+            for value in files.values():
+                value.encode('utf-8')
+        except UnicodeEncodeError:
+            raise InputError('BAD_PACKET', '原件含无效 Unicode') from None
+        return files, 'upload'
+    raise InputError('BAD_PACKET', '选择内置样例或提供四份原件')
 
 
 def intake(files):

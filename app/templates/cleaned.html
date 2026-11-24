@@ -1,0 +1,7 @@
+<section class="panel cleaned-notice">
+  <h2>原件已清理</h2>
+  <p>该批次已解除保留，只保留小时结论；分钟、氧量、有效性和报送明细不再可供服务端复核。</p>
+  <p>若证据已签发，请打开当时下载的监测证据 JSON，在「监测证据签发」页底部复核。证据单内嵌原件与判据，摘要可独立重算。</p>
+  <p><a href="{{ url_for('desk.show', page='hours', run=run_id) }}">查看保留的小时结论</a> ·
+     <a href="{{ url_for('desk.show', page='evidence', run=run_id) }}">前往复核签出的证据</a></p>
+</section>

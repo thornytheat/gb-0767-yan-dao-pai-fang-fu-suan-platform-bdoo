@@ -1,1 +1,73 @@
-<section class="panel"><h2>监测留档</h2><div class="scroll"><table><thead><tr><th>归档编号</th><th>来源</th><th>时间 UTC</th><th>耗时 ms</th></tr></thead><tbody>{% for item in history %}<tr><td><a href="{{ url_for('desk.show',page='evidence',run=item.run_id) }}">{{ item.run_id[:16] }}</a></td><td>{{ item.source }}</td><td>{{ item.created_utc }}</td><td>{{ item.elapsed_ms }}</td></tr>{% else %}<tr><td colspan="4">先归档一份监测原件。</td></tr>{% endfor %}</tbody></table></div></section>
+<section class="panel">
+  <div class="retention-heading">
+    <div><h2>留档到期与原件清理</h2><p class="hint">到期批次应当班办完清理；清理过的批次只留小时结论。已签未结案的证据凭签发时下载的 JSON 继续复核。共用原件按有效引用保留，最后一批解除保留后物理清除。</p></div>
+    <form method="post" action="{{ url_for('desk.clean_due_form') }}" class="inline-form" data-api="/api/retention/cleanup">
+      <button type="submit" name="issue" value="0">当班清理到期批次</button>
+      <button type="submit" name="issue" value="1" class="secondary">到期批次签发并清理</button>
+    </form>
+  </div>
+  <div class="scroll"><table id="retention-table" class="retention-table"><thead><tr>
+    <th>归档编号</th><th>来源</th><th>时间 UTC</th><th>耗时 ms</th><th>保留/结案</th><th>原件引用</th><th>共用原件</th><th>留档页面操作</th>
+  </tr></thead><tbody>
+  {% for item in history %}
+    <tr data-run-id="{{ item.run_id }}" data-cleaned="{{ 'true' if item.cleaned else 'false' }}">
+      <td class="raw"><a href="{{ url_for('desk.show',page=('hours' if item.cleaned else 'evidence'),run=item.run_id) }}" title="{{ item.run_id }}">{{ item.run_id[:16] }}</a></td>
+      <td>{{ item.source }}</td>
+      <td>{{ item.created_utc }}</td>
+      <td>{{ item.elapsed_ms }}</td>
+      <td class="status-cell">
+        {% if item.cleaned %}
+          <span class="tag CLEANED">已清理</span><small>{{ item.released_utc or '' }}</small>
+        {% else %}
+          <span class="tag DUE">{{ item.due_utc or '未设到期' }}</span>
+          {% if item.issued_utc %}<span class="tag ISSUED">已签发</span>{% endif %}
+          <span class="tag {% if item.case_open %}OPEN{% else %}CLOSED{% endif %}">{{ '未结案' if item.case_open else '已结案' }}</span>
+        {% endif %}
+      </td>
+      <td>{{ item.active_original_count }}/4</td>
+      <td>{% if item.shared_original_count %}<b>{{ item.shared_original_count }}</b> 份仍被其他批次保留{% else %}无共用保留{% endif %}</td>
+      <td class="action-cell">
+        {% if item.cleaned %}
+          <a href="{{ url_for('desk.show',page='hours',run=item.run_id) }}">仅小时结论</a>
+          · <a href="{{ url_for('desk.show',page='evidence',run=item.run_id) }}">复核已签证据</a>
+        {% else %}
+          <form method="post" class="inline-form retention-form" action="{{ url_for('desk.cleanup_form',run_id=item.run_id) }}" data-api="/api/runs/{{ item.run_id }}/cleanup">
+            <button type="submit" name="issue" value="0" data-retention-action="cleanup">解除保留并清理</button>
+            <button type="submit" name="issue" value="1" class="secondary" data-retention-action="issue-clean">签发并清理</button>
+          </form>
+        {% endif %}
+      </td>
+    </tr>
+    {% if item.cleaned and item.hours %}
+      <tr class="hour-conclusion-row"><td colspan="8">
+        <details open>
+          <summary>保留的小时结论（{{ item.hours.rows|length }} 个小时段）</summary>
+          <table class="hour-conclusion-table"><thead><tr><th>小时 UTC</th><th>本地</th><th>状态</th><th>有效/应测</th><th>mg/Nm³</th></tr></thead><tbody>
+          {% for hour in item.hours.rows %}
+            <tr><td>{{ hour.hour }}</td><td>{{ hour.local }}</td><td>{{ hour.status }}</td><td>{{ hour.valid }}/{{ hour.scheduled }}</td><td>{{ hour.mg_nm3 if hour.mg_nm3 is not none else '—' }}</td></tr>
+          {% endfor %}
+          </tbody></table>
+        </details>
+      </td></tr>
+    {% endif %}
+  {% else %}
+    <tr><td colspan="8">先归档一份监测原件。</td></tr>
+  {% endfor %}
+  </tbody></table></div>
+</section>
+
+<section class="panel">
+  <h2>共用原件引用台账</h2>
+  <div class="scroll"><table class="retention-table"><thead><tr><th>原件 SHA-256</th><th>有效批次引用</th><th>物理原件</th><th>引用批次</th></tr></thead><tbody>
+  {% for item in original_rows %}
+    <tr>
+      <td class="raw" title="{{ item.sha256 }}"><code>{{ item.sha256[:24] }}…</code></td>
+      <td>{{ item.references }}</td>
+      <td><span class="tag {% if item.stored %}MATCH{% else %}CLEANED{% endif %}">{{ '保留中' if item.stored else '已清除' }}</span></td>
+      <td class="raw">{% for run_id in item.run_ids %}<a href="{{ url_for('desk.show',page='runs',run=run_id) }}"><code>{{ run_id[:12] }}</code></a> {% else %}—{% endfor %}</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="4">归档后按逐文件摘要显示引用。</td></tr>
+  {% endfor %}
+  </tbody></table></div>
+</section>
